@@ -1,0 +1,19 @@
+# Pesos
+models/*.pth
+models/*.pt
+models/*.ckpt
+
+# Datasets
+data/**
+datasets/**
+**/dataset/**
+Synthetic/**
+
+# Salidas
+outputs/**
+!outputs/.gitkeep
+
+# Entornos / caches
+.venv/
+__pycache__/
+*.ipynb_checkpoints/
