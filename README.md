@@ -273,3 +273,57 @@ train_with_pseudo_labels(train_loader, unlabeled_loader, valid_loader, checkpoin
 
 3,000 Synthetic Dataset: [Download](https://drive.google.com/file/d/1qMUyOw4yl-ps7tzOQZJGDnatH_V2VfVI/view?usp=drive_link)
 
+
+---
+
+## API Local (Inferencia HTTP)
+
+Exponer el script `scripts/infer_single.py` como servicio HTTP para que otra máquina en la misma red envíe una imagen y reciba el JSON de inferencia.
+
+### Arranque del servidor
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt  # asegura flask/werkzeug
+python server_ia.py              # * Running on http://0.0.0.0:5001
+```
+
+Variables de entorno opcionales:
+- `PORT` (default 5001)
+- `DEVICE` (cpu | cuda, default cpu)
+- `WEIGHTS` (ruta alternativa a ./models/cda_b7_best_mae.pth)
+- `IMAGE_SIZE` (default 384)
+- `CORS_ORIGIN` (default `*`)
+
+### Endpoints
+
+`GET /health` → `{ "ok": true }`
+
+`POST /infer` (multipart/form-data, campo `image`) → JSON de salida del script (incluye `VHS_pred`, `class_pred`, `label`, `healthy`, `thresholds`, `points_pred`, etc.)
+
+Ejemplo (desde otra PC):
+```bash
+curl -F "image=@/home/ivan/Downloads/Synthetic/Images/heart_21_0.png" http://<IP_LINUX>:5001/infer
+```
+
+Si falla: verificar que ambas máquinas estén en la misma red y no haya client isolation del hotspot.
+
+### Snippet cliente JS
+```javascript
+async function infer(imgFile) {
+	const fd = new FormData();
+	fd.append('image', imgFile);
+	const r = await fetch('http://<IP_LINUX>:5001/infer', { method: 'POST', body: fd });
+	if (!r.ok) throw new Error('HTTP ' + r.status);
+	return await r.json();
+}
+```
+
+### Notas Técnicas
+- Guarda imagen y JSON en directorio temporal.
+- Usa `secure_filename` para sanitizar el nombre.
+- Respuestas con `application/json`.
+- Errores: `400` si falta archivo, `500` si subprocess falla (stderr truncado).
+- CORS simple: header `Access-Control-Allow-Origin`.
+- No modifica el modelo ni el script de inferencia interno.
+
